@@ -81,7 +81,7 @@ python -c "import astropy" >nul 2>&1
 if errorlevel 1 set "MISSING_DEPS=%MISSING_DEPS% astropy"
 python -c "import numpy" >nul 2>&1
 if errorlevel 1 set "MISSING_DEPS=%MISSING_DEPS% numpy"
-python -c "import astropy" >nul 2>&1
+python -c "import PIL" >nul 2>&1
 if errorlevel 1 set "MISSING_DEPS=%MISSING_DEPS% pillow"
 
 if "%MISSING_DEPS%"=="" (
@@ -106,68 +106,67 @@ echo.
 
 :: Write a temporary Python script to handle the heavy lifting
 set "PY_SCRIPT=%temp%\fits_converter_temp.py"
-(
-echo import sys, os
-echo import numpy as np
-echo from astropy.io import fits
-echo from PIL import Image
-echo.
-echo def main():
-echo     if len(sys.argv) < 2:
-echo         return
-echo     filepath = sys.argv[1]
-echo     print(f"Processing: {os.path.basename(filepath)}")
-echo.
-echo     try:
-echo         hdul = fits.open(filepath)
-echo         image_data = None
-echo         for hdu in hdul:
-echo             if hdu.data is not None and isinstance(hdu.data, np.ndarray) and hdu.data.ndim >= 2:
-echo                 image_data = hdu.data.astype(np.float32)
-echo                 break
-echo         hdul.close()
-echo.
-echo         if image_data is None:
-echo             print("Error: No 2D image data found in this FITS file.")
-echo             return
-echo.
-echo         # Handle higher dimensional data if needed
-echo         while image_data.ndim > 2:
-echo             image_data = image_data[0]
-echo.
-echo         # Clean NaNs/Infs
-echo         image_data = np.nan_to_num(image_data)
-echo.
-echo         # Apply percentile contrast stretch (similar to ds9 z-scale)
-echo         vmin, vmax = np.percentile(image_data, (1.0, 99.0))
-echo         if vmax > vmin:
-echo             scaled = np.clip(image_data, vmin, vmax)
-echo             scaled = (scaled - vmin) / (vmax - vmin) * 255.0
-echo         else:
-echo             scaled = np.zeros_like(image_data)
-echo.
-echo         scaled = scaled.astype(np.uint8)
-echo.
-echo         # Flip vertically to fix FITS bottom-left origin coordinate system
-echo         scaled = np.flipud(scaled)
-echo.
-echo         # Save as PNG next to the original file
-echo         out_path = os.path.splitext(filepath)[0] + ".png"
-echo         Image.fromarray(scaled).save(out_path)
-echo         print(f"Successfully converted! Saved to: {out_path}")
-echo.
-echo         # Try to open with GIMP if available
-echo         try:
-echo             os.startfile(out_path, "open")
-echo         except Exception:
-echo             pass
-echo.
-echo     except Exception as e:
-echo         print(f"Error processing FITS file: {e}")
-echo.
-echo if __name__ == "__main__":
-echo     main()
-) > "%PY_SCRIPT%"
+if exist "%PY_SCRIPT%" del "%PY_SCRIPT%"
+>>"%PY_SCRIPT%" echo import sys, os
+>>"%PY_SCRIPT%" echo import numpy as np
+>>"%PY_SCRIPT%" echo from astropy.io import fits
+>>"%PY_SCRIPT%" echo from PIL import Image
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo def main():
+>>"%PY_SCRIPT%" echo     if len(sys.argv) ^< 2:
+>>"%PY_SCRIPT%" echo         return
+>>"%PY_SCRIPT%" echo     filepath = sys.argv[1]
+>>"%PY_SCRIPT%" echo     print(f"Processing: {os.path.basename(filepath)}")
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo     try:
+>>"%PY_SCRIPT%" echo         hdul = fits.open(filepath)
+>>"%PY_SCRIPT%" echo         image_data = None
+>>"%PY_SCRIPT%" echo         for hdu in hdul:
+>>"%PY_SCRIPT%" echo             if hdu.data is not None and isinstance(hdu.data, np.ndarray) and hdu.data.ndim ^>= 2:
+>>"%PY_SCRIPT%" echo                 image_data = hdu.data.astype(np.float32)
+>>"%PY_SCRIPT%" echo                 break
+>>"%PY_SCRIPT%" echo         hdul.close()
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         if image_data is None:
+>>"%PY_SCRIPT%" echo             print("Error: No 2D image data found in this FITS file.")
+>>"%PY_SCRIPT%" echo             return
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         # Handle higher dimensional data if needed
+>>"%PY_SCRIPT%" echo         while image_data.ndim ^> 2:
+>>"%PY_SCRIPT%" echo             image_data = image_data[0]
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         # Clean NaNs/Infs
+>>"%PY_SCRIPT%" echo         image_data = np.nan_to_num(image_data)
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         # Apply percentile contrast stretch (similar to ds9 z-scale)
+>>"%PY_SCRIPT%" echo         vmin, vmax = np.percentile(image_data, (1.0, 99.0))
+>>"%PY_SCRIPT%" echo         if vmax ^> vmin:
+>>"%PY_SCRIPT%" echo             scaled = np.clip(image_data, vmin, vmax)
+>>"%PY_SCRIPT%" echo             scaled = (scaled - vmin) / (vmax - vmin) * 255.0
+>>"%PY_SCRIPT%" echo         else:
+>>"%PY_SCRIPT%" echo             scaled = np.zeros_like(image_data)
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         scaled = scaled.astype(np.uint8)
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         # Flip vertically to fix FITS bottom-left origin coordinate system
+>>"%PY_SCRIPT%" echo         scaled = np.flipud(scaled)
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         # Save as PNG next to the original file
+>>"%PY_SCRIPT%" echo         out_path = os.path.splitext(filepath)[0] + ".png"
+>>"%PY_SCRIPT%" echo         Image.fromarray(scaled).save(out_path)
+>>"%PY_SCRIPT%" echo         print(f"Successfully converted! Saved to: {out_path}")
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo         # Try to open with GIMP if available
+>>"%PY_SCRIPT%" echo         try:
+>>"%PY_SCRIPT%" echo             os.startfile(out_path, "open")
+>>"%PY_SCRIPT%" echo         except Exception:
+>>"%PY_SCRIPT%" echo             pass
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo     except Exception as e:
+>>"%PY_SCRIPT%" echo         print(f"Error processing FITS file: {e}")
+>>"%PY_SCRIPT%" echo.
+>>"%PY_SCRIPT%" echo if __name__ == "__main__":
+>>"%PY_SCRIPT%" echo     main()
 
 if not exist "%PY_SCRIPT%" (
     echo [ERROR] Failed to create conversion script.
